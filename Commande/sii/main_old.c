@@ -13,7 +13,6 @@ bool arg_m_bool =  false;
 bool arg_n_bool = false;
 bool arg_b_bool = false;
 bool arg_s_bool = false;
-bool arg_t_bool = false;
 
 unsigned char stop = '\n';
 unsigned char loop = 0;
@@ -21,7 +20,7 @@ unsigned char iteration = 1;
 
 unsigned char timers_ms[3] ={10,50,100 };
 
-unsigned char message[256] = "";
+unsigned char message[256];
 unsigned int data_size = 0;
 unsigned int trame_size = 0;
 
@@ -159,30 +158,33 @@ void main (int argc, char **argv) {
     unsigned char *trame = (unsigned char *) malloc((7 + data_size) * sizeof(unsigned char)); // trame to send
 	if((arg_m_bool == false)){
         printf("l’argument « m » est obligatoire, les autres sont optionnels.");
-    } else {
-            if((arg_b_bool == true) && (arg_n_bool == true)) {
-                printf("les options « n » et « b » ne peuvent pas être utilisés en même temps");
-                funct_exit();
-            } else { 
-                printf("Message : %s\n", message);
-            
-                printf("Mode boucle : %d\n", loop);
-
-                trame[0] = loop;
-                printf("Nombre d'interations : %d\n", iteration);        
-            }
-            for(int i=0; i<data_size; ++i){
-                    trame[5 + i] = message[i];
-            }
     }
-        trame[1] = iteration;
-        trame[2] = timers_ms[0];
-        trame[3] = timers_ms[1];
-        trame[4] = timers_ms[2];
-        trame[5] = data_size;
-        
-        trame[data_size + 6] = stop; 
 
+    if((arg_b_bool == true) && (arg_n_bool == true)) {
+        printf("les options « n » et « b » ne peuvent pas être utilisés en même temps");
+        funct_exit();
+    } else { 
+        trame[0] = loop; 
+        printf("%d", loop);
+        trame[1] = iteration;
+        printf("%d", iteration);
+    }
+    
+       
+        trame[2] = timers_ms[0];
+        printf("%d", timers_ms[0]);
+        trame[3] = timers_ms[1];
+        printf("%d", timers_ms[1]);
+        trame[4] = timers_ms[2];
+        printf("%d", timers_ms[2]);
+        trame[5] = data_size;
+        printf("%d", data_size);
+        for(int i=0; i<data_size; ++i){
+                    trame[5 + i] = message[i];
+                    printf("Lettre i (%d) : %c\n", i, trame[i]);
+        }
+        trame[data_size + 6] = stop; 
+        printf("%d", stop);
     write(serial_port, trame, strlen(trame));
 
     close(serial_port);

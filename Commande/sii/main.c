@@ -22,7 +22,7 @@ void main (int argc, char **argv) {
      *     Init UART     *
      *********************/
 
-    int serial_port = open("/dev/ttyS", O_RDWR);
+    int serial_port = open("/dev/ttyS6", O_RDWR);
 
     // Check for errors
     if (serial_port < 0) {
