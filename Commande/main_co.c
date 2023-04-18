@@ -8,8 +8,9 @@
 #include <string.h>
 
 #include <unistd.h>
-#include "commande.h"
 
+void Funct_Errors_Gestion(char argument); // Errors gestion
+void Help_Message(void);
 
 
     int bool_args_n_b = 0; // contrainte n and b
@@ -30,7 +31,7 @@ int main(int argc, char **argv)
 {   
     
     
-
+    char* optarg;
     int opt;
     while ( (opt = (getopt(argc, argv, "bhm:n:t:s"))) != -1) {
         switch (opt) {
@@ -85,4 +86,41 @@ int main(int argc, char **argv)
 	printf("Le message est : %s\n", msg_uc);
 	printf("La fin de la trame est : %hhu\n", stop_uc);
     return 0;
+}
+
+void Funct_Errors_Gestion(char argument){
+	switch (argument) {
+		case 'b' :
+				printf("\nthe optional argument for b must be exclusively 0 or 1 \n");
+				Help_Message();
+				break;
+		case 'n' :
+				printf("\nIt is not possible to use options n and b at the same time\n");
+				printf("the optional argument for n must not be less than 0 \n");
+				Help_Message();
+				break;
+		case 'm' :
+				printf("\n the total message must not exceed 256 bytes \n");
+				Help_Message();
+				break;
+		case 's' :
+				printf("\n The message must not be empty if the s option is not activated\n");
+				Help_Message();
+				break;
+		case 't' :
+		case 'h' :
+		default:
+				Help_Message();
+				break;
+	}
+}
+
+void Help_Message(void){
+				printf("Utilisation du programme :\n");
+                printf("-h : affiche l'aide\n");
+                printf("-s : stop le programme\n");
+                printf("-m \"xxx\" : message � envoyer\n");
+                printf("-t \"# # #\" : configure les timers avec les temps indiqu�s\n");
+                printf("-b : message affich� en morse en boucle\n");
+                printf("-n # : message affich� en morse n-fois\n");
 }
