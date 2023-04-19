@@ -23,7 +23,7 @@ SII_TRAME_Trame = { loop, iteration, timers_table, data_lenght,data,stop }
 # Function SII_CMD_CreateTrame()
 - Ref : e002 (Specification.md)
 - Input : `loop, iteration, timers, data_lenght, data, stop`
-- Output : `SII_TRAME_ToSend` 
+- Output : `SII_TRAME_Trame SII_TRAME_ToSend` 
 ```
 if loop, iteration, timers_table, data_lenght, data, stop
 |   return SII_TRAME_ToSend
