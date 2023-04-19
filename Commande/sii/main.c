@@ -1,39 +1,27 @@
-/* C library headers */
-#include <stdio.h> // pour les entrées/sorties
-#include <stdlib.h> // bibliotheque standard
-#include <string.h> // pour les chaines de caracteres
-
-/* Linux headers */
-#include <fcntl.h> // Contains file controls like O_RDWR
-#include <errno.h> // Error integer and strerror() function
-#include <termios.h> // Contains POSIX terminal control definitions
-#include <unistd.h> // getopt(), write(), read(), close()
-
-/* déclaration des types de base */
-#include <sys/types.h>
-
 /* pour la gestion des erreurs */
 #include <errno.h>
 
+#define MESSAGE_FLAG_LOOP       0
+#define MESSAGE_FLAG_ITERATE    1
+#define MESSAGE_FLAG_STOP       2
+#define MESSAGE_FLAG_LOOP       (1 << 0)
+#define MESSAGE_FLAG_ITERATE    (1 << 1)
+#define MESSAGE_FLAG_STOP       (1 << 2)
+
 
 void main (int argc, char **argv) {
-
     /*********************
      *     Init UART     *
      *********************/
-
-    int serial_port = open("/dev/ttyS6", O_RDWR);
-
+    int serial_port = open("/dev/ttyACM0", O_RDWR);
     // Check for errors
     if (serial_port < 0) {
         printf("Error %i from open: %s\n", errno, strerror(errno));
     }
-
     // Create new termios struct, we call it 'tty' for convention
     // No need for "= {0}" at the end as we'll immediately write the existing
     // config to this struct
     struct termios tty;
-
     // Read in existing settings, and handle any error
     // NOTE: This is important! POSIX states that the struct passed to tcsetattr()
     // must have been initialized with a call to tcgetattr() overwise behaviour
@@ -41,7 +29,6 @@ void main (int argc, char **argv) {
     if(tcgetattr(serial_port, &tty) != 0) {
         printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
     }
-
     // UART Init Registers
     tty.c_cflag &= ~PARENB; // Clear parity bit, disabling parity (most common)
     tty.c_cflag &= ~CSTOPB; // Clear stop field, only one stop bit used in communication (most common)
@@ -60,37 +47,40 @@ void main (int argc, char **argv) {
     tty.c_oflag &= ~ONLCR; // Prevent conversion of newline to carriage return/line feed
     tty.c_cc[VTIME] = 10;    // Wait for up to 1s (10 deciseconds), returning as soon as any data is received.
     tty.c_cc[VMIN] = 0;
-
     // Set in/out baud rate to be 9600
     cfsetspeed(&tty, B9600);
-
     // Save tty settings, also checking for error
     if (tcsetattr(serial_port, TCSANOW, &tty) != 0) {
         printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
     }
-
     /***********************
      *     CLI Program     *
      ***********************/
-
     int c;
 	extern char *optarg;
 	extern int optind;
-
-	char timer1_ms = 10; 
-	char timer2_ms = 50; 
-	char timer3_ms = 100;
-
+	unsigned char timer1_ms = 10; 
+	unsigned char timer2_ms = 50; 
+	unsigned char timer3_ms = 100;
 	unsigned char message[256] = "";
     unsigned char message_size = 0;
     unsigned char msg_size = 0;
-
 	unsigned char messageLoopFlag = 0;
-
 	unsigned char messageNumber = 1;
-
 	while ((c = getopt(argc, argv, "t:n:bhm:s")) != -1) {
 		switch (c) {
+			// Help
+            case 'h':
+            default:
+				printf("Utilisation du programme :\n");
+				printf("-h : affiche l'aide\n");
+				printf("-s : stop le programme\n");
+				printf("-m \"xxx\" : message à envoyer\n");
+				printf("-t \"# # #\" : configure les timers avec les temps indiqués\n");
+				printf("-b : message affiché en morse en boucle\n");
+				printf("-n # : message affiché en morse n-fois\n");
+				exit(1) ;
+				break;
 			// Message
 			case 'm':
 				if(strlen(optarg) > 256) {
@@ -104,95 +94,79 @@ void main (int argc, char **argv) {
 				break;
 
 			case 'b':
-				messageLoopFlag |= (1 << 0);
+				messageLoopFlag |= (1 << MESSAGE_FLAG_LOOP);
+				messageLoopFlag |= MESSAGE_FLAG_LOOP;
 				break;
 
 			case 'n':
-				messageLoopFlag |= (1 << 1);
+				messageLoopFlag |= (1 << MESSAGE_FLAG_ITERATE);
+				messageLoopFlag |= MESSAGE_FLAG_ITERATE;
 				messageNumber = atoi(strtok(optarg, " "));
 				break;
 
-			// Timers
-			case 't':
-				timer1_ms = atoi(strtok(optarg, " "));
-				timer2_ms = atoi(strtok(NULL, " "));
-				timer3_ms = atoi(strtok(NULL, " "));
-				printf("Temps définis : court = %dms, moyen = %dms, long = %dms.\n", timer1_ms, timer2_ms, timer3_ms);
-                break;
-            
+@@ -140,7 +140,7 @@ void main (int argc, char **argv) {
+
             // Stop
             case 's':
-				messageLoopFlag &= ~(1 << 0);
-				messageLoopFlag &= ~(1 << 1);
-				break;
-
-			// Help
-            		case 'h':
-            		default:
-				printf("Utilisation du programme :\n");
-				printf("-h : affiche l'aide\n");
-				printf("-s : stop le programme\n");
-				printf("-m \"xxx\" : message à envoyer\n");
-				printf("-t \"# # #\" : configure les timers avec les temps indiqués\n");
-				printf("-b : message affiché en morse en boucle\n");
-				printf("-n # : message affiché en morse n-fois\n");
-
-				exit(1) ;
+				messageLoopFlag |= (1 << MESSAGE_FLAG_STOP);
+				messageLoopFlag |= MESSAGE_FLAG_STOP;
 				break;
 		}
 	} 
-
     /* Message array */
     unsigned char *msg = (unsigned char *) malloc((7 + msg_size) * sizeof(unsigned char));
 	
     /* If message is empty */
-	if ((messageLoopFlag) && (strcmp(message, "") == 0)) {
-
+	if ((!(messageLoopFlag & 4)) && (strcmp(message, "") == 0)) {
 		printf("Précisez un message '-m' ou envoyez la commande stop '-s'. Option '-h' pour l'aide.\n");
 		exit(0);
-
 	} else {
-
 		/* Message : -m */
 		printf("Message : %s\n", message);
 
 		/* Option -b or -n */
 		if ((messageLoopFlag & 1) && !(messageLoopFlag & 2)) {
-			
+		if ((messageLoopFlag & MESSAGE_FLAG_LOOP) && (!(messageLoopFlag & MESSAGE_FLAG_ITERATE)) && (!(messageLoopFlag & MESSAGE_FLAG_STOP))) {
+
 			printf("Mode boucle : %d\n", (messageLoopFlag & 1));
             msg[0] = messageLoopFlag & 1;
+			printf("Mode boucle : %d\n", (messageLoopFlag & MESSAGE_FLAG_LOOP));
+            msg[0] = messageLoopFlag & MESSAGE_FLAG_LOOP;
 
 		} else if ((messageLoopFlag & 2) && !(messageLoopFlag & 1)) {
-			
+		} else if ((messageLoopFlag & MESSAGE_FLAG_ITERATE) && (!(messageLoopFlag & MESSAGE_FLAG_LOOP)) && (!(messageLoopFlag & MESSAGE_FLAG_STOP))) {
+
 			/* Iterations : -n */			
 			printf("Nombre d'interations : %d\n", messageNumber);
             msg[1] = messageNumber;
 
-		} else if (!messageLoopFlag) {
-			
+		} else if ((!(messageLoopFlag & 1)) && (!(messageLoopFlag & 2)) && (!(messageLoopFlag & 4))) {
+		} else if ((!(messageLoopFlag & MESSAGE_FLAG_LOOP)) && (!(messageLoopFlag & MESSAGE_FLAG_ITERATE)) && (!(messageLoopFlag & MESSAGE_FLAG_STOP))) {
+
+			/* Iterations : -n */			
+			printf("Nombre d'interations : %d\n", messageNumber);
+            msg[1] = messageNumber;
+
+		} else if (messageLoopFlag & 4) {
+		} else if (messageLoopFlag & MESSAGE_FLAG_STOP) {
+
 			/* Iterations : -n */			
 			printf("Arret de la diffusion.\n");
-            message_size = 0;
-            msg_size = 7;
-            msg[0] = 0;
-            msg[1] = 0;
-            msg[6] = '\n';
-
-		} else {
 
             /* Options conflict (-b && -n) */
             printf("Erreur: L'option -n et -b ne doivent pas etre appelees en meme temps.\n");
+		    exit(0);
         }
 	}   
 
-    if (messageLoopFlag) {
+    if (!(messageLoopFlag & 4)) {
+    if (!(messageLoopFlag & MESSAGE_FLAG_STOP)) {
 
         /* Setup Timers */
         msg[2] = timer1_ms;
         msg[3] = timer2_ms;
         msg[4] = timer3_ms;
         msg[5] = message_size;
-
         /* Iterator for copy starts after settings cases */
         int i=6;
         
@@ -201,21 +175,16 @@ void main (int argc, char **argv) {
             msg[i] = message[i-6]; // msg[6] = message[0]
             printf("Lettre i (%d) : %c\n", i, msg[i]);
         }
-
         /* Last char (\n) */
         msg[i] = '\n';
         printf("Lettre i (%d) fin : %d\n", i, msg[i]);
-
     }
-
     /* Write to UART*/
     printf("Sizeof msg : %d\n", msg_size);
     printf("Frame : %d %d %d %d %d %d\n", msg[0], msg[1], msg[2], msg[3], msg[4], msg[5]);
     write(serial_port, msg, msg_size);
-
     /* Close serial traffic */ 
     close(serial_port);
-
     /* Free */
     free(msg);
 }
