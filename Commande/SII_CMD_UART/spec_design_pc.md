@@ -14,47 +14,37 @@
 
 
 # Type SII_TRAME_Trame
-
 - Ref : e001 (Specification.md)
 - Input :
 - Output :
-
 ```
-SII_TRAME_Trame = { loop, iteration, timers, data_lenght,data,stop }
+SII_TRAME_Trame = { loop, iteration, timers_table, data_lenght,data,stop }
 ```
-
 # Function SII_CMD_CreateTrame()
-
 - Ref : e002 (Specification.md)
 - Input : `loop, iteration, timers, data_lenght, data, stop`
 - Output : `SII_TRAME_ToSend` 
-
 ```
-if loop, iteration, timers, data_lenght, data, stop
+if loop, iteration, timers_table, data_lenght, data, stop
 |   return SII_TRAME_ToSend
 ```
-
 # Function SII_TRAMES_InitTrame()
-
 - Ref : e002 (Specification.md)
 - Input : `sii_trames_trame`
 - Output : 
-
 ```
 if sii_trames_trame
 |   sii_trames_trame.loop = 0;
 |   sii_trames_trame.iteration = 0;
-|   sii_trames_trame.timers[3] = {10, 50, 100};
+|   sii_trames_trame.timers_table[3] = {10, 50, 100};
 |   sii_trames_trame.data_lenght;
 |   sii_trames_trame.data;
 |   sii_trames_trame.stop = \n;
 ```
 # Function SII_TRAMES_Funct_ToSendData_UART()
-
 - Ref : e002 (Specification.md)
 - Input : `sii_trames_trame, serial_port`
 - Output : 
-
 ```
 if sii_trames_trame, serial_port
 |   transmission message;
